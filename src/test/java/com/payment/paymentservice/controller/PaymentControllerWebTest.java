@@ -1,6 +1,8 @@
 package com.payment.paymentservice.controller;
 
 import com.payment.paymentservice.dto.PaymentResponse;
+import com.payment.paymentservice.exception.GlobalExceptionHandler;
+import com.payment.paymentservice.exception.MethodNotFoundException;
 import com.payment.paymentservice.service.PaymentService;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -34,6 +36,7 @@ class PaymentControllerWebTest {
 
         mockMvc = MockMvcBuilders
                 .standaloneSetup(controller)
+                .setControllerAdvice(new GlobalExceptionHandler())
                 .setValidator(validator)
                 .build();
     }
@@ -88,5 +91,61 @@ class PaymentControllerWebTest {
                 .andExpect(status().isBadRequest());
 
         verifyNoInteractions(paymentService);
+    }
+
+    @Test
+    void shouldReturnBadRequestForInvalidPeriod() throws Exception {
+
+        String json = """
+            {
+              "companyName": "CompanyA",
+              "serviceName": "ProductService",
+              "methodName": "GetProducts",
+              "validFrom": "2026-11-30T00:00:00Z",
+              "validTo": "2026-11-01T00:00:00Z"
+            }
+            """;
+
+        when(paymentService.processPayment(any()))
+                .thenThrow(new IllegalArgumentException(
+                        "Дата окончания должна быть позже даты начала"
+                ));
+
+        mockMvc.perform(post("/api/payments")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message")
+                        .value("Дата окончания должна быть позже даты начала"));
+
+        verify(paymentService).processPayment(any());
+    }
+
+    @Test
+    void shouldReturnNotFoundForUnknownMethod() throws Exception {
+
+        String json = """
+            {
+              "companyName": "CompanyA",
+              "serviceName": "ProductService",
+              "methodName": "UnknownMethod",
+              "validFrom": "2026-11-01T00:00:00Z",
+              "validTo": "2026-11-30T23:59:59Z"
+            }
+            """;
+
+        when(paymentService.processPayment(any()))
+                .thenThrow(new MethodNotFoundException(
+                        "Указанный сервис или метод не зарегистрирован"
+                ));
+
+        mockMvc.perform(post("/api/payments")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404));
+
+        verify(paymentService).processPayment(any());
     }
 }

@@ -7,6 +7,7 @@ import com.payment.paymentservice.dto.PaymentResponse;
 import com.payment.paymentservice.dto.RegistryMethodResponse;
 import com.payment.paymentservice.dto.SubscriptionRequest;
 import com.payment.paymentservice.entity.Subscription;
+import com.payment.paymentservice.exception.MethodNotFoundException;
 import com.payment.paymentservice.repository.SubscriptionRepository;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -117,7 +118,7 @@ class PaymentServiceTest {
                 "ProductService", "UnknownMethod"
         )).thenReturn(Optional.empty());
 
-        assertThrows(IllegalArgumentException.class, () ->
+        assertThrows(MethodNotFoundException.class, () ->
                 paymentService.processPayment(request)
         );
 

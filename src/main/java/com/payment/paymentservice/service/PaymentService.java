@@ -8,6 +8,7 @@ import com.payment.paymentservice.dto.RegistryMethodResponse;
 import com.payment.paymentservice.dto.SubscriptionRequest;
 import com.payment.paymentservice.entity.Subscription;
 import com.payment.paymentservice.repository.SubscriptionRepository;
+import com.payment.paymentservice.exception.MethodNotFoundException;
 
 import org.springframework.stereotype.Service;
 
@@ -50,7 +51,7 @@ public class PaymentService {
         RegistryMethodResponse method = registryClient.findMethod(
                 request.serviceName(),
                 request.methodName()
-        ).orElseThrow(() -> new IllegalArgumentException(
+        ).orElseThrow(() -> new MethodNotFoundException(
                 "Указанный сервис или метод не зарегистрирован"
         ));
 
