@@ -1,9 +1,12 @@
 package com.payment.paymentservice.client;
 
+import com.payment.paymentservice.dto.RegistryMethodResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
+
+import java.util.Optional;
 
 @Component
 public class RegistryClient {
@@ -19,18 +22,21 @@ public class RegistryClient {
                 .build();
     }
 
-    public boolean methodExists(String serviceName, String methodName) {
+    public Optional<RegistryMethodResponse> findMethod(
+            String serviceName,
+            String methodName
+    ) {
         try {
-            restClient.get()
+            RegistryMethodResponse response = restClient.get()
                     .uri("/api/services/{serviceName}/methods/{methodName}",
                             serviceName, methodName)
                     .retrieve()
-                    .toBodilessEntity();
+                    .body(RegistryMethodResponse.class);
 
-            return true;
+            return Optional.ofNullable(response);
 
         } catch (HttpClientErrorException.NotFound e) {
-            return false;
+            return Optional.empty();
         }
     }
 }

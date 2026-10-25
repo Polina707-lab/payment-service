@@ -1,13 +1,16 @@
 package com.payment.paymentservice.service;
 
+import com.payment.paymentservice.client.ApplicationServiceClient;
 import com.payment.paymentservice.client.RegistryClient;
 import com.payment.paymentservice.dto.PaymentRequest;
+import com.payment.paymentservice.dto.RegistryMethodResponse;
 import com.payment.paymentservice.repository.SubscriptionRepository;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -24,9 +27,13 @@ class PaymentServiceTest {
 
         registryClient = mock(RegistryClient.class);
 
+        ApplicationServiceClient applicationServiceClient =
+                mock(ApplicationServiceClient.class);
+
         paymentService = new PaymentService(
                 repository,
-                registryClient
+                registryClient,
+                applicationServiceClient
         );
     }
 
@@ -40,9 +47,15 @@ class PaymentServiceTest {
                 Instant.parse("2026-11-30T23:59:59Z")
         );
 
-        when(registryClient.methodExists(
+        when(registryClient.findMethod(
                 "ProductService", "GetProducts"
-        )).thenReturn(true);
+        )).thenReturn(Optional.of(
+                new RegistryMethodResponse(
+                        "ProductService",
+                        "GetProducts",
+                        "http://localhost:8083"
+                )
+        ));
 
         assertDoesNotThrow(() ->
                 paymentService.processPayment(request)
@@ -76,9 +89,9 @@ class PaymentServiceTest {
                 Instant.parse("2026-11-30T23:59:59Z")
         );
 
-        when(registryClient.methodExists(
+        when(registryClient.findMethod(
                 "ProductService", "UnknownMethod"
-        )).thenReturn(false);
+        )).thenReturn(Optional.empty());
 
         assertThrows(IllegalArgumentException.class, () ->
                 paymentService.processPayment(request)
