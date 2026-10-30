@@ -1,3 +1,4 @@
+
 package com.payment.paymentservice.controller;
 
 import com.payment.paymentservice.dto.PaymentRequest;
@@ -22,8 +23,7 @@ class PaymentControllerTest {
                 new PaymentController(paymentService);
 
         PaymentRequest request = new PaymentRequest(
-                "CompanyA",
-                "ProductService",
+                1L,
                 "GetProducts",
                 Instant.parse("2026-11-01T00:00:00Z"),
                 Instant.parse("2026-11-30T23:59:59Z")

@@ -1,3 +1,4 @@
+
 package com.payment.paymentservice.client;
 
 import com.payment.paymentservice.dto.RegistryMethodResponse;
@@ -8,6 +9,7 @@ import org.springframework.web.client.RestClient;
 
 import java.util.Optional;
 
+// Отправляет HTTP GET в Registry Service и получает информацию о методе
 @Component
 public class RegistryClient {
 
@@ -23,13 +25,16 @@ public class RegistryClient {
     }
 
     public Optional<RegistryMethodResponse> findMethod(
-            String serviceName,
+            Long serviceId,
             String methodName
     ) {
         try {
             RegistryMethodResponse response = restClient.get()
-                    .uri("/api/services/{serviceName}/methods/{methodName}",
-                            serviceName, methodName)
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/api/services")
+                            .queryParam("serviceId", serviceId)
+                            .queryParam("methodName", methodName)
+                            .build())
                     .retrieve()
                     .body(RegistryMethodResponse.class);
 

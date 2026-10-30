@@ -21,8 +21,8 @@ import org.springframework.web.client.RestClient;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
+import java.time.Instant;
 import java.util.List;
-import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -35,6 +35,9 @@ class PaymentIntegrationTest {
 
     private static final WireMockServer applicationServer =
             new WireMockServer(0);
+
+    private static final String REGISTRY_PATH =
+            "/api/services?serviceId=1&methodName=GetProducts";
 
     static {
         registryServer.start();
@@ -71,20 +74,16 @@ class PaymentIntegrationTest {
     @Test
     void shouldProcessPaymentSuccessfully() throws Exception {
 
-        String companyName = "IntegrationTest-" + UUID.randomUUID();
-
         String registryResponse = """
                 {
-                  "serviceName": "ProductService",
+                  "serviceId": 1,
                   "methodName": "GetProducts",
                   "serviceUrl": "%s"
                 }
                 """.formatted(applicationServer.baseUrl());
 
         registryServer.stubFor(
-                get(urlEqualTo(
-                        "/api/services/ProductService/methods/GetProducts"
-                ))
+                get(urlEqualTo(REGISTRY_PATH))
                         .willReturn(
                                 aResponse()
                                         .withStatus(200)
@@ -105,13 +104,12 @@ class PaymentIntegrationTest {
 
         String requestJson = """
                 {
-                  "companyName": "%s",
-                  "serviceName": "ProductService",
+                  "serviceId": 1,
                   "methodName": "GetProducts",
                   "validFrom": "2026-11-01T00:00:00Z",
                   "validTo": "2026-11-30T23:59:59Z"
                 }
-                """.formatted(companyName);
+                """;
 
         Long savedId = null;
 
@@ -135,17 +133,22 @@ class PaymentIntegrationTest {
                     .findById(savedId)
                     .orElseThrow();
 
-            assertEquals(companyName, saved.getCompanyName());
-            assertEquals("ProductService", saved.getServiceName());
+            assertEquals(1L, saved.getServiceId());
             assertEquals("GetProducts", saved.getMethodName());
+            assertEquals(
+                    Instant.parse("2026-11-01T00:00:00Z"),
+                    saved.getValidFrom()
+            );
+            assertEquals(
+                    Instant.parse("2026-11-30T23:59:59Z"),
+                    saved.getValidTo()
+            );
             assertEquals(response.token(), saved.getToken());
 
             // Проверяем обращение к Registry Service
             registryServer.verify(
                     1,
-                    getRequestedFor(urlEqualTo(
-                            "/api/services/ProductService/methods/GetProducts"
-                    ))
+                    getRequestedFor(urlEqualTo(REGISTRY_PATH))
             );
 
             // Проверяем обращение к Application Service
@@ -165,9 +168,7 @@ class PaymentIntegrationTest {
             assertEquals(1, requests.size());
 
             LoggedRequest sentRequest = requests.get(0);
-
             String sentJson = sentRequest.getBodyAsString();
-
 
             assertFalse(
                     sentJson.isBlank(),
@@ -176,11 +177,8 @@ class PaymentIntegrationTest {
 
             JsonNode body = jsonMapper.readTree(sentJson);
 
-            // Проверяем содержимое запроса
-            assertEquals(
-                    companyName,
-                    body.get("companyName").asText()
-            );
+            // Проверяем новый контракт: только два поля
+            assertEquals(2, body.size());
 
             assertEquals(
                     "GetProducts",
@@ -192,16 +190,6 @@ class PaymentIntegrationTest {
                     body.get("token").asText()
             );
 
-            assertEquals(
-                    "2026-11-01T00:00:00Z",
-                    body.get("validFrom").asText()
-            );
-
-            assertEquals(
-                    "2026-11-30T23:59:59Z",
-                    body.get("validTo").asText()
-            );
-
         } finally {
             // Удаляем тестовую запись даже при ошибке проверки
             if (savedId != null && repository.existsById(savedId)) {
@@ -210,35 +198,28 @@ class PaymentIntegrationTest {
         }
     }
 
-
     @Test
     void shouldReturnBadGatewayWhenRegistryFails() {
 
-        String companyName = "IntegrationTest-" + UUID.randomUUID();
-
         // Registry Service возвращает HTTP 503
         registryServer.stubFor(
-                get(urlEqualTo(
-                        "/api/services/ProductService/methods/GetProducts"
-                ))
+                get(urlEqualTo(REGISTRY_PATH))
                         .willReturn(
                                 aResponse().withStatus(503)
                         )
         );
 
         String requestJson = """
-            {
-              "companyName": "%s",
-              "serviceName": "ProductService",
-              "methodName": "GetProducts",
-              "validFrom": "2026-11-01T00:00:00Z",
-              "validTo": "2026-11-30T23:59:59Z"
-            }
-            """.formatted(companyName);
+                {
+                  "serviceId": 1,
+                  "methodName": "GetProducts",
+                  "validFrom": "2026-11-01T00:00:00Z",
+                  "validTo": "2026-11-30T23:59:59Z"
+                }
+                """;
 
         long countBefore = repository.count();
 
-        // Отправляем запрос в Payment Service
         var response = httpClient.post()
                 .uri("http://localhost:" + port + "/api/payments")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -247,52 +228,39 @@ class PaymentIntegrationTest {
                 .onStatus(
                         status -> status.isError(),
                         (request, clientResponse) -> {
-                            // Не выбрасываем исключение:
-                            // хотим проверить HTTP-статус сами.
+                            // Проверяем HTTP-статус самостоятельно
                         }
                 )
                 .toBodilessEntity();
 
-        // Проверяем ответ Payment Service
         assertEquals(502, response.getStatusCode().value());
 
-        // Registry Service получил запрос
         registryServer.verify(
                 1,
-                getRequestedFor(urlEqualTo(
-                        "/api/services/ProductService/methods/GetProducts"
-                ))
+                getRequestedFor(urlEqualTo(REGISTRY_PATH))
         );
 
-        // Application Service не вызывался
         applicationServer.verify(
                 0,
                 postRequestedFor(urlEqualTo("/api/subscriptions"))
         );
 
-        // Новая подписка не появилась в MySQL
         assertEquals(countBefore, repository.count());
     }
-
 
     @Test
     void shouldReturnBadGatewayWhenApplicationServiceFails() {
 
-        String companyName = "IntegrationTest-" + UUID.randomUUID();
-
-        // Registry Service успешно находит метод
         String registryResponse = """
-            {
-              "serviceName": "ProductService",
-              "methodName": "GetProducts",
-              "serviceUrl": "%s"
-            }
-            """.formatted(applicationServer.baseUrl());
+                {
+                  "serviceId": 1,
+                  "methodName": "GetProducts",
+                  "serviceUrl": "%s"
+                }
+                """.formatted(applicationServer.baseUrl());
 
         registryServer.stubFor(
-                get(urlEqualTo(
-                        "/api/services/ProductService/methods/GetProducts"
-                ))
+                get(urlEqualTo(REGISTRY_PATH))
                         .willReturn(
                                 aResponse()
                                         .withStatus(200)
@@ -313,18 +281,16 @@ class PaymentIntegrationTest {
         );
 
         String requestJson = """
-            {
-              "companyName": "%s",
-              "serviceName": "ProductService",
-              "methodName": "GetProducts",
-              "validFrom": "2026-11-01T00:00:00Z",
-              "validTo": "2026-11-30T23:59:59Z"
-            }
-            """.formatted(companyName);
+                {
+                  "serviceId": 1,
+                  "methodName": "GetProducts",
+                  "validFrom": "2026-11-01T00:00:00Z",
+                  "validTo": "2026-11-30T23:59:59Z"
+                }
+                """;
 
         long countBefore = repository.count();
 
-        // Отправляем запрос в Payment Service
         var response = httpClient.post()
                 .uri("http://localhost:" + port + "/api/payments")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -337,42 +303,32 @@ class PaymentIntegrationTest {
                 )
                 .toBodilessEntity();
 
-        // Payment Service возвращает HTTP 502
         assertEquals(502, response.getStatusCode().value());
 
-        // Registry Service был вызван
         registryServer.verify(
                 1,
-                getRequestedFor(urlEqualTo(
-                        "/api/services/ProductService/methods/GetProducts"
-                ))
+                getRequestedFor(urlEqualTo(REGISTRY_PATH))
         );
 
-        // Application Service получил запрос
         applicationServer.verify(
                 1,
                 postRequestedFor(urlEqualTo("/api/subscriptions"))
         );
 
-        // Подписка не сохранена в MySQL
         assertEquals(countBefore, repository.count());
     }
-
 
     @Test
     void shouldRejectInvalidSubscriptionPeriod() {
 
-        String companyName = "IntegrationTest-" + UUID.randomUUID();
-
         String requestJson = """
-            {
-              "companyName": "%s",
-              "serviceName": "ProductService",
-              "methodName": "GetProducts",
-              "validFrom": "2026-12-01T00:00:00Z",
-              "validTo": "2026-11-01T00:00:00Z"
-            }
-            """.formatted(companyName);
+                {
+                  "serviceId": 1,
+                  "methodName": "GetProducts",
+                  "validFrom": "2026-12-01T00:00:00Z",
+                  "validTo": "2026-11-01T00:00:00Z"
+                }
+                """;
 
         long countBefore = repository.count();
 
@@ -388,30 +344,25 @@ class PaymentIntegrationTest {
                 )
                 .toBodilessEntity();
 
-        // Проверяем ошибку валидации
         assertEquals(400, response.getStatusCode().value());
 
-        // Внешние сервисы не должны вызываться
         registryServer.verify(0, anyRequestedFor(anyUrl()));
         applicationServer.verify(0, anyRequestedFor(anyUrl()));
 
-        // Подписка не должна появиться в MySQL
         assertEquals(countBefore, repository.count());
     }
-
 
     @Test
-    void shouldRejectBlankCompanyName() {
+    void shouldRejectInvalidServiceId() {
 
         String requestJson = """
-            {
-              "companyName": "   ",
-              "serviceName": "ProductService",
-              "methodName": "GetProducts",
-              "validFrom": "2026-11-01T00:00:00Z",
-              "validTo": "2026-11-30T23:59:59Z"
-            }
-            """;
+                {
+                  "serviceId": 0,
+                  "methodName": "GetProducts",
+                  "validFrom": "2026-11-01T00:00:00Z",
+                  "validTo": "2026-11-30T23:59:59Z"
+                }
+                """;
 
         long countBefore = repository.count();
 
@@ -427,17 +378,13 @@ class PaymentIntegrationTest {
                 )
                 .toBodilessEntity();
 
-        // Проверяем HTTP 400
         assertEquals(400, response.getStatusCode().value());
 
-        // Внешние сервисы не должны вызываться
         registryServer.verify(0, anyRequestedFor(anyUrl()));
         applicationServer.verify(0, anyRequestedFor(anyUrl()));
 
-        // Подписка не должна сохраняться
         assertEquals(countBefore, repository.count());
     }
-
 
     record PaymentResult(
             Long subscriptionId,
@@ -445,6 +392,4 @@ class PaymentIntegrationTest {
             String status
     ) {
     }
-
-
 }

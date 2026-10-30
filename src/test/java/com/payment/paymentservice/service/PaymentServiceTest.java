@@ -1,3 +1,4 @@
+
 package com.payment.paymentservice.service;
 
 import com.payment.paymentservice.client.ApplicationServiceClient;
@@ -41,19 +42,19 @@ class PaymentServiceTest {
 
     @Test
     void shouldAcceptValidPeriodAndRegisteredMethod() {
+
         PaymentRequest request = new PaymentRequest(
-                "CompanyA",
-                "ProductService",
+                1L,
                 "GetProducts",
                 Instant.parse("2026-11-01T00:00:00Z"),
                 Instant.parse("2026-11-30T23:59:59Z")
         );
 
         when(registryClient.findMethod(
-                "ProductService", "GetProducts"
+                1L, "GetProducts"
         )).thenReturn(Optional.of(
                 new RegistryMethodResponse(
-                        "ProductService",
+                        1L,
                         "GetProducts",
                         "http://localhost:8083"
                 )
@@ -71,7 +72,6 @@ class PaymentServiceTest {
                 eq("http://localhost:8083"),
                 argThat(subscriptionRequest ->
                         subscriptionRequest.token().equals(response.token())
-                                && subscriptionRequest.companyName().equals("CompanyA")
                                 && subscriptionRequest.methodName().equals("GetProducts")
                 )
         );
@@ -79,21 +79,23 @@ class PaymentServiceTest {
         verify(repository).saveAndFlush(
                 argThat(subscription ->
                         subscription.getToken().equals(response.token())
-                                && subscription.getCompanyName().equals("CompanyA")
+                                && subscription.getServiceId().equals(1L)
+                                && subscription.getMethodName().equals("GetProducts")
+                                && subscription.getValidFrom().equals(request.validFrom())
+                                && subscription.getValidTo().equals(request.validTo())
                 )
         );
     }
 
     @Test
     void shouldRejectInvalidPeriod() {
+
         PaymentRequest request = new PaymentRequest(
-                "CompanyA",
-                "ProductService",
+                1L,
                 "GetProducts",
                 Instant.parse("2026-11-30T00:00:00Z"),
                 Instant.parse("2026-11-01T00:00:00Z")
         );
-
 
         assertThrows(IllegalArgumentException.class, () ->
                 paymentService.processPayment(request)
@@ -106,16 +108,16 @@ class PaymentServiceTest {
 
     @Test
     void shouldRejectUnknownMethod() {
+
         PaymentRequest request = new PaymentRequest(
-                "CompanyA",
-                "ProductService",
+                1L,
                 "UnknownMethod",
                 Instant.parse("2026-11-01T00:00:00Z"),
                 Instant.parse("2026-11-30T23:59:59Z")
         );
 
         when(registryClient.findMethod(
-                "ProductService", "UnknownMethod"
+                1L, "UnknownMethod"
         )).thenReturn(Optional.empty());
 
         assertThrows(MethodNotFoundException.class, () ->
@@ -126,22 +128,21 @@ class PaymentServiceTest {
         verifyNoInteractions(repository);
     }
 
-
     @Test
     void shouldNotSaveSubscriptionWhenApplicationServiceFails() {
+
         PaymentRequest request = new PaymentRequest(
-                "CompanyA",
-                "ProductService",
+                1L,
                 "GetProducts",
                 Instant.parse("2026-11-01T00:00:00Z"),
                 Instant.parse("2026-11-30T23:59:59Z")
         );
 
         when(registryClient.findMethod(
-                "ProductService", "GetProducts"
+                1L, "GetProducts"
         )).thenReturn(Optional.of(
                 new RegistryMethodResponse(
-                        "ProductService",
+                        1L,
                         "GetProducts",
                         "http://localhost:8083"
                 )
@@ -162,4 +163,3 @@ class PaymentServiceTest {
                 .saveAndFlush(any(Subscription.class));
     }
 }
-

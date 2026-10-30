@@ -1,3 +1,4 @@
+
 package com.payment.paymentservice.client;
 
 import com.payment.paymentservice.dto.SubscriptionRequest;
@@ -11,8 +12,6 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.HttpServerErrorException;
-
-import java.time.Instant;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
@@ -45,9 +44,9 @@ class ApplicationServiceClientTest {
                 ))
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.companyName").value("CompanyA"))
                 .andExpect(jsonPath("$.methodName").value("GetProducts"))
                 .andExpect(jsonPath("$.token").value("test-token"))
+                .andExpect(jsonPath("$.length()").value(2))
                 .andRespond(withStatus(HttpStatus.CREATED));
 
         assertDoesNotThrow(() ->
@@ -69,9 +68,7 @@ class ApplicationServiceClientTest {
                         "http://localhost:8083/api/subscriptions"
                 ))
                 .andExpect(method(HttpMethod.POST))
-                .andRespond(
-                        withServerError()
-                );
+                .andRespond(withServerError());
 
         assertThrows(HttpServerErrorException.class, () ->
                 applicationServiceClient.registerSubscription(
@@ -85,10 +82,7 @@ class ApplicationServiceClientTest {
 
     private SubscriptionRequest createRequest() {
         return new SubscriptionRequest(
-                "CompanyA",
                 "GetProducts",
-                Instant.parse("2026-11-01T00:00:00Z"),
-                Instant.parse("2026-11-30T23:59:59Z"),
                 "test-token"
         );
     }

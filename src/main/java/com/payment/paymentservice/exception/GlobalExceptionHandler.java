@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.client.RestClientException;
 
 import java.time.Instant;
-
+//Перехватывает исключения и преобразует их в HTTP-ответы
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 

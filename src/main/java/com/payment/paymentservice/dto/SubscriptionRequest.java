@@ -1,12 +1,9 @@
+
 package com.payment.paymentservice.dto;
 
-import java.time.Instant;
-
+// Данные, отправляемые в Application Service после оплаты
 public record SubscriptionRequest(
-        String companyName,
         String methodName,
-        Instant validFrom,
-        Instant validTo,
         String token
 ) {
 }

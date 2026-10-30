@@ -1,3 +1,4 @@
+
 package com.payment.paymentservice.service;
 
 import com.payment.paymentservice.client.ApplicationServiceClient;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Service;
 import java.util.Objects;
 import java.util.UUID;
 
+// Бизнес-логика сервиса оплаты
 @Service
 public class PaymentService {
 
@@ -47,15 +49,15 @@ public class PaymentService {
             );
         }
 
-        // 2. Проверяем метод через реестр
+        // 2. Проверяем существование сервиса и метода через реестр
         RegistryMethodResponse method = registryClient.findMethod(
-                request.serviceName(),
+                request.serviceId(),
                 request.methodName()
         ).orElseThrow(() -> new MethodNotFoundException(
                 "Указанный сервис или метод не зарегистрирован"
         ));
 
-        if (!Objects.equals(method.serviceName(), request.serviceName())
+        if (!Objects.equals(method.serviceId(), request.serviceId())
                 || !Objects.equals(method.methodName(), request.methodName())
                 || method.serviceUrl() == null
                 || method.serviceUrl().isBlank()) {
@@ -69,10 +71,7 @@ public class PaymentService {
 
         // 4. Формируем данные для прикладного сервиса
         SubscriptionRequest subscriptionRequest = new SubscriptionRequest(
-                request.companyName(),
                 request.methodName(),
-                request.validFrom(),
-                request.validTo(),
                 token
         );
 
@@ -84,8 +83,7 @@ public class PaymentService {
 
         // 6. Создаём и сохраняем подписку
         Subscription subscription = new Subscription(
-                request.companyName(),
-                request.serviceName(),
+                request.serviceId(),
                 request.methodName(),
                 request.validFrom(),
                 request.validTo(),
@@ -95,7 +93,7 @@ public class PaymentService {
         Subscription savedSubscription =
                 subscriptionRepository.saveAndFlush(subscription);
 
-        // 7. Возвращаем результат
+        // 7. Возвращаем результат оплаты
         return new PaymentResponse(
                 savedSubscription.getId(),
                 savedSubscription.getToken(),

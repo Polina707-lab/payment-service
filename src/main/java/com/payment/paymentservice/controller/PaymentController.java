@@ -10,7 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/payments")
+@RequestMapping("/api/payments") //базовый URL - контроллера
 public class PaymentController {
 
     private final PaymentService paymentService;
@@ -27,3 +27,11 @@ public class PaymentController {
         return paymentService.processPayment(request);
     }
 }
+/*
+Класс отвечает за:
+- Приём POST /api/payments (принимает HTTP-запрос на оплату)
+- Преобразование JSON в Java-объект PaymentRequest.
+- Запуск валидации через @Valid.
+- Вызов PaymentService (передача ему запроса)
+- Возврат HTTP-ответа клиенту.
+ */

@@ -1,3 +1,4 @@
+
 package com.payment.paymentservice.repository;
 
 import com.payment.paymentservice.entity.Subscription;
@@ -24,21 +25,24 @@ class SubscriptionRepositoryTest {
 
         String token = UUID.randomUUID().toString();
 
+        Instant validFrom = Instant.parse("2026-11-01T00:00:00Z");
+        Instant validTo = Instant.parse("2026-11-30T23:59:59Z");
+
         Subscription subscription = new Subscription(
-                "CompanyA",
-                "ProductService",
+                1L,
                 "GetProducts",
-                Instant.parse("2026-11-01T00:00:00Z"),
-                Instant.parse("2026-11-30T23:59:59Z"),
+                validFrom,
+                validTo,
                 token
         );
 
         Subscription saved = repository.saveAndFlush(subscription);
 
         assertNotNull(saved.getId());
-        assertEquals("CompanyA", saved.getCompanyName());
-        assertEquals("ProductService", saved.getServiceName());
+        assertEquals(1L, saved.getServiceId());
         assertEquals("GetProducts", saved.getMethodName());
+        assertEquals(validFrom, saved.getValidFrom());
+        assertEquals(validTo, saved.getValidTo());
         assertEquals(token, saved.getToken());
 
         assertTrue(repository.findById(saved.getId()).isPresent());

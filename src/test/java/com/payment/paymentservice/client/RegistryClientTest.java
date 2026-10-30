@@ -1,3 +1,4 @@
+
 package com.payment.paymentservice.client;
 
 import com.payment.paymentservice.dto.RegistryMethodResponse;
@@ -5,6 +6,7 @@ import com.payment.paymentservice.dto.RegistryMethodResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
@@ -40,16 +42,16 @@ class RegistryClientTest {
 
         String json = """
                 {
-                  "serviceName": "ProductService",
+                  "serviceId": 1,
                   "methodName": "GetProducts",
                   "serviceUrl": "http://localhost:8083"
                 }
                 """;
 
         mockServer.expect(requestTo(
-                        "http://localhost:8082/api/services/ProductService/methods/GetProducts"
+                        "http://localhost:8082/api/services?serviceId=1&methodName=GetProducts"
                 ))
-                .andExpect(method(org.springframework.http.HttpMethod.GET))
+                .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess(
                         json,
                         MediaType.APPLICATION_JSON
@@ -57,7 +59,7 @@ class RegistryClientTest {
 
         Optional<RegistryMethodResponse> result =
                 registryClient.findMethod(
-                        "ProductService",
+                        1L,
                         "GetProducts"
                 );
 
@@ -65,7 +67,7 @@ class RegistryClientTest {
 
         RegistryMethodResponse response = result.get();
 
-        assertEquals("ProductService", response.serviceName());
+        assertEquals(1L, response.serviceId());
         assertEquals("GetProducts", response.methodName());
         assertEquals("http://localhost:8083", response.serviceUrl());
 
@@ -76,14 +78,14 @@ class RegistryClientTest {
     void shouldReturnEmptyWhenMethodNotFound() {
 
         mockServer.expect(requestTo(
-                        "http://localhost:8082/api/services/ProductService/methods/UnknownMethod"
+                        "http://localhost:8082/api/services?serviceId=1&methodName=UnknownMethod"
                 ))
-                .andExpect(method(org.springframework.http.HttpMethod.GET))
+                .andExpect(method(HttpMethod.GET))
                 .andRespond(withResourceNotFound());
 
         Optional<RegistryMethodResponse> result =
                 registryClient.findMethod(
-                        "ProductService",
+                        1L,
                         "UnknownMethod"
                 );
 

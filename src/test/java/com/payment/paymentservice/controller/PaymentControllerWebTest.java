@@ -1,3 +1,4 @@
+
 package com.payment.paymentservice.controller;
 
 import com.payment.paymentservice.dto.PaymentResponse;
@@ -11,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -29,8 +31,8 @@ class PaymentControllerWebTest {
         PaymentController controller =
                 new PaymentController(paymentService);
 
-        var validator =
-                new org.springframework.validation.beanvalidation.LocalValidatorFactoryBean();
+        LocalValidatorFactoryBean validator =
+                new LocalValidatorFactoryBean();
 
         validator.afterPropertiesSet();
 
@@ -53,8 +55,7 @@ class PaymentControllerWebTest {
 
         String json = """
                 {
-                  "companyName": "CompanyA",
-                  "serviceName": "ProductService",
+                  "serviceId": 1,
                   "methodName": "GetProducts",
                   "validFrom": "2026-11-01T00:00:00Z",
                   "validTo": "2026-11-30T23:59:59Z"
@@ -73,17 +74,16 @@ class PaymentControllerWebTest {
     }
 
     @Test
-    void shouldRejectBlankCompanyName() throws Exception {
+    void shouldRejectInvalidServiceId() throws Exception {
 
         String json = """
-            {
-              "companyName": "",
-              "serviceName": "ProductService",
-              "methodName": "GetProducts",
-              "validFrom": "2026-11-01T00:00:00Z",
-              "validTo": "2026-11-30T23:59:59Z"
-            }
-            """;
+                {
+                  "serviceId": 0,
+                  "methodName": "GetProducts",
+                  "validFrom": "2026-11-01T00:00:00Z",
+                  "validTo": "2026-11-30T23:59:59Z"
+                }
+                """;
 
         mockMvc.perform(post("/api/payments")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -97,14 +97,13 @@ class PaymentControllerWebTest {
     void shouldReturnBadRequestForInvalidPeriod() throws Exception {
 
         String json = """
-            {
-              "companyName": "CompanyA",
-              "serviceName": "ProductService",
-              "methodName": "GetProducts",
-              "validFrom": "2026-11-30T00:00:00Z",
-              "validTo": "2026-11-01T00:00:00Z"
-            }
-            """;
+                {
+                  "serviceId": 1,
+                  "methodName": "GetProducts",
+                  "validFrom": "2026-11-30T00:00:00Z",
+                  "validTo": "2026-11-01T00:00:00Z"
+                }
+                """;
 
         when(paymentService.processPayment(any()))
                 .thenThrow(new IllegalArgumentException(
@@ -126,14 +125,13 @@ class PaymentControllerWebTest {
     void shouldReturnNotFoundForUnknownMethod() throws Exception {
 
         String json = """
-            {
-              "companyName": "CompanyA",
-              "serviceName": "ProductService",
-              "methodName": "UnknownMethod",
-              "validFrom": "2026-11-01T00:00:00Z",
-              "validTo": "2026-11-30T23:59:59Z"
-            }
-            """;
+                {
+                  "serviceId": 1,
+                  "methodName": "UnknownMethod",
+                  "validFrom": "2026-11-01T00:00:00Z",
+                  "validTo": "2026-11-30T23:59:59Z"
+                }
+                """;
 
         when(paymentService.processPayment(any()))
                 .thenThrow(new MethodNotFoundException(

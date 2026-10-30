@@ -5,7 +5,7 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import tools.jackson.databind.json.JsonMapper;
-
+//Отправляет HTTP POST в Application Service для регистрации подписки
 @Component
 public class ApplicationServiceClient {
 

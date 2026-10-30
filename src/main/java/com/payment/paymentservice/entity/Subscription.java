@@ -13,10 +13,7 @@ public class Subscription {
     private Long id;
 
     @Column(nullable = false)
-    private String companyName;
-
-    @Column(nullable = false)
-    private String serviceName;
+    private Long serviceId;
 
     @Column(nullable = false)
     private String methodName;
@@ -33,14 +30,12 @@ public class Subscription {
     protected Subscription() {
     }
 
-    public Subscription(String companyName,
-                        String serviceName,
+    public Subscription(Long serviceId,
                         String methodName,
                         Instant validFrom,
                         Instant validTo,
                         String token) {
-        this.companyName = companyName;
-        this.serviceName = serviceName;
+        this.serviceId = serviceId;
         this.methodName = methodName;
         this.validFrom = validFrom;
         this.validTo = validTo;
@@ -51,12 +46,8 @@ public class Subscription {
         return id;
     }
 
-    public String getCompanyName() {
-        return companyName;
-    }
-
-    public String getServiceName() {
-        return serviceName;
+    public Long getServiceId() {
+        return serviceId;
     }
 
     public String getMethodName() {
