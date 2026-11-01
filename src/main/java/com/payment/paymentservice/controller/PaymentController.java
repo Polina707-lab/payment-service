@@ -9,14 +9,20 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+import com.payment.paymentservice.entity.Subscription;
+import com.payment.paymentservice.repository.SubscriptionRepository;
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/payments") //базовый URL - контроллера
 public class PaymentController {
 
     private final PaymentService paymentService;
+    private final SubscriptionRepository subscriptionRepository;
 
-    public PaymentController(PaymentService paymentService) {
+    public PaymentController(PaymentService paymentService, SubscriptionRepository subscriptionRepository) {
         this.paymentService = paymentService;
+        this.subscriptionRepository = subscriptionRepository;
     }
 
     @PostMapping
@@ -26,6 +32,11 @@ public class PaymentController {
     ) {
         return paymentService.processPayment(request);
     }
+    
+    @GetMapping
+    public List<Subscription> getAllSubscriptions() {
+        return subscriptionRepository.findAll();
+    }
 }
 /*
 Класс отвечает за:
@@ -34,4 +45,8 @@ public class PaymentController {
 - Запуск валидации через @Valid.
 - Вызов PaymentService (передача ему запроса)
 - Возврат HTTP-ответа клиенту.
- */
+
+- Приём GET /api/payments (просмотр всех подписок).
+- Возвращает список всех оформленных подписок из БД.
+- Используется мобильным приложением для просмотра актуальных данных.
+*/
