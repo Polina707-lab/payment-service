@@ -32,4 +32,11 @@ public class PaymentClient {
                 .retrieve()
                 .body(ValidationResponseDto.class);
     }
+
+    public SubscriptionDto[] getAllSubscriptions() {
+        return restClient.get()
+                .uri("/api/payments")
+                .retrieve()
+                .body(SubscriptionDto[].class);
+    }
 }

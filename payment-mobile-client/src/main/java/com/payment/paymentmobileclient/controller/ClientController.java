@@ -70,4 +70,16 @@ public class ClientController {
         }
         return "index";
     }
+    
+
+    @GetMapping("/subscriptions")
+    public String subscriptions(Model model) {
+        try {
+            SubscriptionDto[] subs = paymentClient.getAllSubscriptions();
+            model.addAttribute("subscriptions", subs);
+        } catch (Exception e) {
+            model.addAttribute("error", "Ошибка загрузки данных: " + e.getMessage());
+        }
+        return "subscriptions";
+    }
 }
