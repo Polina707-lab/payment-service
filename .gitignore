@@ -41,3 +41,11 @@ build/
 # Local environment files
 .env
 .env.*
+
+# Android Studio
+android-client/.gradle/
+android-client/.idea/
+android-client/build/
+android-client/local.properties
+android-client/.cxx/
+android-client/app/build/
