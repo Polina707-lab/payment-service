@@ -7,9 +7,6 @@ import java.io.IOException;
 import okhttp3.*;
 
 public class ApiClient {
-    //  вставить IP сервера (192.168.1.13)
-    private static final String BASE_URL = "http://192.168.1.13:8081";
-
     private final OkHttpClient client = new OkHttpClient();
     private final Gson gson = new Gson();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -19,9 +16,11 @@ public class ApiClient {
         void onError(String message);
     }
 
-    public void getAllSubscriptions(Callback<Subscription[]> callback) {
+    public void getAllSubscriptions(String ipAddress, Callback<Subscription[]> callback) {
+        String url = "http://" + ipAddress + "/api/payments";
+
         Request request = new Request.Builder()
-                .url(BASE_URL + "/api/payments")
+                .url(url)
                 .get()
                 .build();
 

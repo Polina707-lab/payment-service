@@ -4,6 +4,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -14,6 +15,7 @@ public class MainActivity extends AppCompatActivity {
     private ApiClient apiClient;
     private LinearLayout container;
     private ProgressBar progressBar;
+    private EditText etServerIp;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -23,16 +25,24 @@ public class MainActivity extends AppCompatActivity {
         apiClient = new ApiClient();
         container = findViewById(R.id.container);
         progressBar = findViewById(R.id.progressBar);
+        etServerIp = findViewById(R.id.etServerIp);
         Button btnLoad = findViewById(R.id.btnLoad);
 
         btnLoad.setOnClickListener(v -> loadData());
     }
 
     private void loadData() {
+        String ipAddress = etServerIp.getText().toString().trim();
+
+        if (ipAddress.isEmpty()) {
+            Toast.makeText(this, "Введите IP-адрес", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         progressBar.setVisibility(View.VISIBLE);
         container.removeAllViews();
 
-        apiClient.getAllSubscriptions(new ApiClient.Callback<Subscription[]>() {
+        apiClient.getAllSubscriptions(ipAddress, new ApiClient.Callback<Subscription[]>() {
             @Override
             public void onSuccess(Subscription[] result) {
                 progressBar.setVisibility(View.GONE);
